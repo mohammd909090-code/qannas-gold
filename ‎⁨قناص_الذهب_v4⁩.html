@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>قناص الذهب والأسهم v4</title>
+<style>
+body{font-family:Arial,Tahoma,sans-serif;background:#0f172a;color:#fff;margin:0;padding:16px}
+.card{max-width:680px;margin:18px auto;background:#1e293b;padding:18px;border-radius:16px;box-shadow:0 8px 28px #0008}
+h1{text-align:center;color:#fbbf24;font-size:24px;margin:0 0 12px}
+h3{color:#fbbf24;margin:18px 0 8px}
+label{display:block;margin-top:11px;font-weight:bold}
+input,select,button,textarea{width:100%;box-sizing:border-box;border-radius:10px;border:1px solid #475569;padding:12px;font-size:17px;margin-top:6px}
+input,select,textarea{background:#fff;color:#111}
+button{background:#f59e0b;color:#111;font-weight:bold;border:0;margin-top:17px;cursor:pointer}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.result{background:#020617;color:#22c55e;font-weight:bold}
+.blue{background:#082f49;color:#7dd3fc;font-weight:bold}
+.gold{background:#422006;color:#facc15;font-weight:bold}
+.red{background:#450a0a;color:#fca5a5;font-weight:bold}
+.note{font-size:13px;color:#cbd5e1;line-height:1.8;margin-top:12px}
+.badge{padding:10px;border-radius:10px;margin-top:8px;font-weight:bold;text-align:center}
+</style>
+</head>
+<body>
+<div class="card">
+<h1>قناص v4<br>حاسبة المستويات + تقييم النموذج</h1>
+
+<label>A</label>
+<input id="a" type="number" step="any" inputmode="decimal" placeholder="بداية الموجة">
+
+<label>B</label>
+<input id="b" type="number" step="any" inputmode="decimal" placeholder="نهاية الموجة">
+
+<label>C</label>
+<input id="c" type="number" step="any" inputmode="decimal" placeholder="التصحيح / الارتداد">
+
+<label>نوع الأصل</label>
+<select id="asset">
+<option value="gold">ذهب / أسهم كبيرة</option>
+<option value="crypto">بتكوين / كريبتو</option>
+<option value="stock">سهم متذبذب / عالي الحركة</option>
+</select>
+
+<label>هل تم كسر B بعد C؟</label>
+<select id="breakB">
+<option value="yes">نعم، تم كسر B</option>
+<option value="no">لا، لم يكسر B بعد</option>
+</select>
+
+<button type="button" onclick="calculate()">احسب وقيّم النموذج</button>
+
+<h3>تقييم النموذج</h3>
+<div class="grid">
+<div><label>الاتجاه المكتشف</label><input id="direction" class="blue" readonly></div>
+<div><label>درجة النموذج</label><input id="grade" class="gold" readonly></div>
+</div>
+
+<div class="grid">
+<div><label>قوة AB</label><input id="power" class="result" readonly></div>
+<div><label>عمق C</label><input id="retracement" class="result" readonly></div>
+</div>
+
+<div class="grid">
+<div><label>قرب C من A</label><input id="closeness" class="result" readonly></div>
+<div><label>النقاط</label><input id="score" class="result" readonly></div>
+</div>
+
+<label>منطقة الهدف المرجحة</label>
+<input id="targetZone" class="gold" readonly>
+
+<label>الحكم العملي</label>
+<textarea id="judgement" class="gold" readonly rows="5"></textarea>
+
+<h3>المستويات الرقمية</h3>
+<label>D0 / 1.000</label><input id="d0" class="result" readonly>
+<label>D1 / 1.272</label><input id="d1" class="result" readonly>
+<label>D2 / 1.414</label><input id="d2" class="result" readonly>
+<label>D3 / 1.618</label><input id="d3" class="result" readonly>
+<label>D4 / 2.000</label><input id="d4" class="gold" readonly>
+<label>D5 / 2.618</label><input id="d5" class="red" readonly>
+<label>D6 / 3.000</label><input id="d6" class="red" readonly>
+<label>D7 / 4.000</label><input id="d7" class="red" readonly>
+<label>D8 / 5.000</label><input id="d8" class="red" readonly>
+
+<h3>الحسابات الخام</h3>
+<div class="grid">
+<div><label>فرق السعر |B-A|</label><input id="priceDiff" class="result" readonly></div>
+<div><label>فرق الجذر Δ</label><input id="delta" class="result" readonly></div>
+</div>
+<div class="grid">
+<div><label>جذر C</label><input id="rootc" class="result" readonly></div>
+<div><label>نسبة C من AB</label><input id="rRaw" class="result" readonly></div>
+</div>
+
+<div class="note">
+المنطق: لا تدخل لأن المستوى موجود. انتظر كسر B، ثم استخدم المستويات كأهداف.<br>
+قوة AB = |B-A| / A. عمق C = |B-C| / |B-A|. قرب C من A = 1 - |C-A| / |B-A|.<br>
+D4-D5 غالبًا منطقة قرار/استنزاف، وليست ضمان استمرار.
+</div>
+</div>
+
+<script>
+function fmt(x){return x.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function pct(x){return x.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';}
+function level(rootC,sign,delta,m){return Math.pow(rootC+sign*(m*delta),2);}
+function set(id,v){document.getElementById(id).value=v;}
+
+function calculate(){
+ var A=parseFloat(document.getElementById('a').value);
+ var B=parseFloat(document.getElementById('b').value);
+ var C=parseFloat(document.getElementById('c').value);
+ if(isNaN(A)||isNaN(B)||isNaN(C)||A<=0||B<=0||C<=0){
+   alert('أدخل A و B و C أرقام صحيحة أكبر من صفر'); return;
+ }
+
+ var isUp = B > A;
+ var sign = isUp ? 1 : -1;
+ var direction = isUp ? 'صاعد: A قاع / B قمة / C تصحيح' : 'هابط: A قمة / B قاع / C ارتداد';
+ set('direction',direction);
+
+ var delta=Math.abs(Math.sqrt(B)-Math.sqrt(A));
+ var rootC=Math.sqrt(C);
+ var diff=Math.abs(B-A);
+ var power=(diff/A)*100;
+ var R=Math.abs(B-C)/diff;                 // عمق رجوع C
+ var closeA=Math.max(0, 1-(Math.abs(C-A)/diff)); // قرب C من A
+ var breakB=document.getElementById('breakB').value;
+ var asset=document.getElementById('asset').value;
+
+ var ms=[1,1.272,1.414,1.618,2,2.618,3,4,5];
+ for(var i=0;i<ms.length;i++){ set('d'+i, fmt(level(rootC,sign,delta,ms[i]))); }
+
+ set('priceDiff',fmt(diff));
+ set('delta',delta.toFixed(6));
+ set('rootc',rootC.toFixed(6));
+ set('power',pct(power));
+ set('retracement',pct(R*100));
+ set('closeness',pct(closeA*100));
+ set('rRaw',R.toFixed(4));
+
+ var score=0;
+ // قوة AB
+ if(power>=10){score+=3;} else if(power>=5){score+=2;} else if(power>=3){score+=1;}
+ // عمق C
+ if(R>=0.80 && R<=1.05){score+=3;} else if(R>=0.50 && R<0.80){score+=2;} else if(R>=0.25 && R<0.50){score+=1;}
+ // قرب C من A
+ if(closeA>=0.85){score+=3;} else if(closeA>=0.60){score+=2;} else if(closeA>=0.35){score+=1;}
+ // كسر B
+ if(breakB==='yes'){score+=3;}
+
+ // تعديل بسيط للأصول عالية الحركة
+ if(asset==='stock' && power>=8){score+=1;}
+ if(asset==='crypto' && power>=6){score+=1;}
+
+ var grade='', zone='', judgement='';
+ if(score>=11){
+   grade='A+ قوي جدًا';
+   zone='D4 إلى D5، ومع الزخم العالي قد تمتد إلى D6-D7';
+   judgement='النموذج قوي جدًا. إذا كان B مكسورًا بإغلاق واضح، فالتعامل الأفضل هو أهداف متدرجة حتى D4-D5. لا تطارد السعر داخل D4-D5؛ هذه منطقة استنزاف وجني أرباح ومراقبة انعكاس.';
+ } else if(score>=8){
+   grade='A قوي';
+   zone='D3 إلى D4';
+   judgement='النموذج قوي. بعد كسر B يكون الهدف المنطقي D3-D4. إذا تم اختراق D4 بثبات، انتقل لمراقبة D5، لكن لا تفترض الوصول له مباشرة.';
+ } else if(score>=5){
+   grade='B متوسط';
+   zone='D1 إلى D3';
+   judgement='النموذج متوسط. الأفضل جني جزء عند D1/D2، ولا تعتمد على D4 إلا إذا ظهر زخم واختراقات واضحة بعد كسر B.';
+ } else {
+   grade='C ضعيف / غير مكتمل';
+   zone='D0 إلى D1 فقط أو انتظار كسر B';
+   judgement='النموذج ضعيف أو غير مكتمل. إذا لم يكسر B فلا توجد صفقة مؤكدة. إذا كسر B فتعامل معه كمضاربة قصيرة بأهداف قريبة فقط.';
+ }
+
+ if(breakB==='no'){
+   judgement='لم يتم كسر B بعد؛ النموذج غير مفعل. المستويات الآن للمتابعة فقط، وليست للتنفيذ. بعد كسر B أعد الحساب أو غيّر خيار كسر B إلى نعم.';
+ }
+
+ set('score',score+' / 13');
+ set('grade',grade);
+ set('targetZone',zone);
+ set('judgement',judgement);
+}
+</script>
+</body>
+</html>
